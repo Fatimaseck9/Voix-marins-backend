@@ -18,15 +18,14 @@ async function bootstrap() {
     }
   }));
   
-  app.enableCors({
-    origin: '*', 
-    //['http://localhost:4200', 'http://localhost:4204','https://521a-154-124-68-191.ngrok-free.app'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'Range', 'Accept'],
-    exposedHeaders: ['Content-Length', 'Content-Range', 'Content-Type'],
-    //credentials: true,
-    maxAge: 3600,
-  });
+ app.enableCors({
+  origin: 'https://strong-druid-9db0b1.netlify.app',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'Range', 'Accept'],
+  exposedHeaders: ['Content-Length', 'Content-Range', 'Content-Type'],
+  credentials: true, // utile si tu utilises des cookies / tokens
+  maxAge: 3600,
+});
 
   // Middleware pour gérer les headers ngrok et augmenter le timeout
   app.use((req, res, next) => {
