@@ -7,11 +7,7 @@ import { PlaintesModule } from './plainte/plainte.module';
 import { User } from './users/entities/user.entity';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-
 import { Admin } from 'typeorm';
-
-
-
 
 @Module({
   imports: [
@@ -23,13 +19,14 @@ import { Admin } from 'typeorm';
       password: '',
       ssl: false,
       database: 'GestionMarin',
-      autoLoadEntities: true, 
-     // synchronize: true, 
-      entities: [Plainte, CategoriePlainte, Marin,User,Admin],
-     
+      autoLoadEntities: true,
+      //synchronize: true,
+      entities: [Plainte, CategoriePlainte, Marin, User, Admin],
     }),
     TypeOrmModule.forFeature([Plainte, CategoriePlainte, Marin]),
-    PlaintesModule,AuthModule,UsersModule,
+    PlaintesModule,
+    AuthModule,
+    UsersModule,
   ],
 })
 export class AppModule {}

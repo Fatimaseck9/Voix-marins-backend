@@ -26,9 +26,35 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
+  private normalizePhoneNumberForSearch(numero: string): string {
+    // Supprimer tous les caractères non numériques
+    numero = numero.replace(/[^\d]/g, '');
+    
+    // Si le numéro commence par 221, on enlève le 221
+    if (numero.startsWith('221')) {
+      return numero.substring(3);
+    }
+    
+    // Si c'est un numéro à 12 chiffres (avec 221), on enlève le 221
+    if (numero.length === 12 && numero.startsWith('221')) {
+      return numero.substring(3);
+    }
+    
+    // Si c'est un numéro à 9 chiffres, on le garde tel quel
+    if (numero.length === 9) {
+      return numero;
+    }
+    
+    return numero;
+  }
+
   async requestLogin(numero: string) {
+    // Normaliser le numéro pour la recherche
+    const normalizedNumero = this.normalizePhoneNumberForSearch(numero);
+    console.log('Numéro normalisé pour la recherche:', normalizedNumero);
+    
     const marin = await this.marinRepo.findOne({
-      where: { numero },
+      where: { numero: normalizedNumero },
       relations: ['user'],
     });
 
@@ -46,10 +72,10 @@ export class AuthService {
 
     try {
       await this.smsService.sendSms(
-        numero,
+        marin.numero, // Utiliser le numéro stocké dans la base
         `Bonjour Cher marin,\nVotre code de connexion pour la plateforme est : ${code}\nCe code expire dans 4 minutes.\n\nAgence nationale des affaires maritimes (ANAM)`,
       );
-      console.log('SMS envoyé avec succès à :', numero);
+      console.log('SMS envoyé avec succès à :', marin.numero);
       console.log('Code envoyé :', code);
     } catch (error) {
       console.error("Erreur lors de l'envoi de l'SMS:", error);
@@ -67,12 +93,21 @@ export class AuthService {
   }
 
   async verifyCode(numero: string, code: string) {
+    // Normaliser le numéro pour la recherche
+    const normalizedNumero = this.normalizePhoneNumberForSearch(numero);
+    console.log('Vérification - Numéro normalisé:', normalizedNumero);
+    console.log('Vérification - Code reçu:', code);
+
     const marin = await this.marinRepo.findOne({
-      where: { numero, codeConnexion: code },
+      where: { 
+        numero: normalizedNumero,
+        codeConnexion: code 
+      },
       relations: ['user'],
     });
 
     if (!marin || !marin.user) {
+      console.log('Marin non trouvé ou code invalide');
       throw new NotFoundException('Code ou numéro invalide');
     }
 
@@ -92,29 +127,22 @@ export class AuthService {
       sub: marin.user.id,
       numero: marin.numero,
       name: marin.user.name,
-      role: marin.user.role, // AJOUTÉ: inclure le rôle dans le payload
+      role: marin.user.role,
     };
 
-    // MODIFIÉ: Durées étendues pour les tokens
     const access_token = this.jwtService.sign(payload, {
-      expiresIn: '24h', // CHANGÉ: de '1h' à '24h'
+      expiresIn: '24h',
     });
     const refresh_token = this.jwtService.sign(payload, {
-      expiresIn: '30d', // CHANGÉ: de '7d' à '30d'
+      expiresIn: '30d',
     });
 
     marin.user.refreshToken = await bcrypt.hash(refresh_token, 10);
     await this.userRepository.save(marin.user);
 
-    // AJOUTÉ: Logs pour debug
-    console.log('=== TOKENS GÉNÉRÉS ===');
-    console.log('User ID:', marin.user.id);
-    console.log('Access token expire dans: 24h');
-    console.log('Refresh token expire dans: 30d');
-    console.log('=====================');
+    console.log('Connexion réussie pour:', marin.user.name);
 
     return {
-      //message: `Bienvenue ${marin.user.name}`,
       userId: marin.user.id,
       access_token,
       role: marin.user.role,

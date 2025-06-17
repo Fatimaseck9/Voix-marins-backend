@@ -32,11 +32,24 @@ export class Plainte {
   audioUrl: string;
 
   @Column({
+    type: 'varchar',
+    nullable: true,
+    default: null
+  })
+  pvUrl: string | null;
+
+  @Column({
     type: 'enum',
-    enum: ['En attente', 'Traitée', 'Rejetée'],
+    enum: ['En attente', 'En traitement', 'Resolue'],
     default: 'En attente',
   })
   statut: string;
+
+  @Column({ type: 'int', nullable: true })
+  resolvedBy: number | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  dateResolution: Date | null;
 
   @ManyToOne(() => Marin, (marin) => marin.plaintes)
   utilisateur: Marin;
@@ -51,6 +64,5 @@ export class Plainte {
   updatedAt: Date;
   
   @Column({ type: 'text', nullable: true })
-detailsplainte: string;
-
+  detailsplainte: string;
 }

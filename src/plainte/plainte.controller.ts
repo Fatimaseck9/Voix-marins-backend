@@ -226,12 +226,81 @@ async findByUserId(@Param('id') id: number) {
 @Put(':id')
 async updatePlainte(
   @Param('id') id: number,
-  @Body() updateData: { statut?: string; categorie?: string; detailsplainte?: string }
+  @Body() updateData: { 
+    statut?: string; 
+    categorie?: string; 
+    detailsplainte?: string;
+    pvUrl?: string;
+    resolvedBy?: number;
+  },
+  @Req() req: any
 ) {
+  // Si le statut est "Resolue", utiliser l'ID de l'admin
+  if (updateData.statut === 'Resolue') {
+    if (!req.user || !req.user.sub) {
+      throw new BadRequestException('Informations administrateur manquantes');
+    }
+    updateData.resolvedBy = req.user.sub;
+  }
+
   return this.plaintesService.updatePlainte(id, updateData);
 }
 
 
 
+@Post(':id/pv')
+@UseInterceptors(
+  FileInterceptor('file', {
+    storage: diskStorage({
+      destination: './uploads/pv',
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const ext = extname(file.originalname);
+        cb(null, `pv-${uniqueSuffix}${ext}`);
+      },
+    }),
+    fileFilter: (req, file, cb) => {
+      // Vérifier le type de fichier
+      if (!file.mimetype.match(/^(application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document)$/)) {
+        return cb(
+          new BadRequestException(
+            'Type de fichier non supporté. Formats acceptés : PDF, DOC, DOCX',
+          ),
+          false,
+        );
+      }
+      cb(null, true);
+    },
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB max
+    },
+  }),
+)
+async uploadPV(
+  @Param('id') plainteId: number,
+  @UploadedFile() file: Express.Multer.File,
+) {
+  if (!file) {
+    throw new BadRequestException('Aucun fichier n\'a été uploadé');
+  }
+
+  return this.plaintesService.uploadPV(plainteId, file);
+}
+
+@Delete(':id/pv')
+@UseGuards(JwtAuthGuard)
+async deletePV(@Param('id') plainteId: number) {
+  return this.plaintesService.deletePV(plainteId);
+}
+
+@Get('resolues')
+async getPlaintesResolues() {
+  return this.plaintesService.findPlaintesResolues();
+}
+
+@Get('admin/:id')
+async getAdminInfo(@Param('id') id: number) {
+  return this.plaintesService.getAdminInfo(id);
+}
 
 }

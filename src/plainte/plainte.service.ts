@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Plainte } from 'src/Entity/plainte.entity';
 import { Repository } from 'typeorm';
@@ -7,6 +7,8 @@ import { Marin } from 'src/Entity/marin.entity';
 import { CategoriePlainte } from 'src/Entity/categorie.entity';
 import * as fs from 'fs';
 import * as path from 'path';
+import { User } from 'src/users/entities/user.entity';
+import { Admin } from 'src/Entity/admin.entity';
 
 @Injectable()
 export class PlaintesService {
@@ -24,8 +26,13 @@ export class PlaintesService {
     private readonly marinRepository: Repository<Marin>,
     @InjectRepository(CategoriePlainte)
     private readonly categorieRepository: Repository<CategoriePlainte>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(Admin)
+    private readonly adminRepository: Repository<Admin>,
   ) {
     void this.initializeCategories();
+    void this.updateOldStatuses();
   }
 
   private async initializeCategories() {
@@ -36,6 +43,27 @@ export class PlaintesService {
       if (!existing) {
         await this.categorieRepository.save(cat);
       }
+    }
+  }
+
+  private async updateOldStatuses() {
+    try {
+      // Mettre à jour les anciens statuts
+      await this.plainteRepository
+        .createQueryBuilder()
+        .update(Plainte)
+        .set({ statut: 'En traitement' })
+        .where('statut = :oldStatus', { oldStatus: 'Traitée' })
+        .execute();
+
+      await this.plainteRepository
+        .createQueryBuilder()
+        .update(Plainte)
+        .set({ statut: 'Resolue' })
+        .where('statut = :oldStatus', { oldStatus: 'Rejetée' })
+        .execute();
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour des statuts:', error);
     }
   }
 
@@ -79,12 +107,20 @@ export class PlaintesService {
 }
 
   findAll(): Promise<Plainte[]> {
-    return this.plainteRepository.find({
-      relations: ['utilisateur', 'utilisateur.user'],
-      order: {
-        dateCreation: 'DESC',
-      },
-    });
+    try {
+      return this.plainteRepository.find({
+        relations: ['utilisateur', 'utilisateur.user'],
+        order: {
+          dateCreation: 'DESC',
+        },
+      });
+    } catch (error) {
+      console.error('Erreur lors de la récupération des plaintes:', error);
+      throw new HttpException(
+        'Erreur lors de la récupération des plaintes',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 
   async findByUserId(userId: number): Promise<Plainte[]> {
@@ -151,18 +187,104 @@ export class PlaintesService {
   //return this.plainteRepository.save(plainte);
 //}
 
-async updatePlainte(id: number, updateData: Partial<{ statut: string; categorie: string; detailsplainte: string }>) {
+async updatePlainte(id: number, updateData: Partial<{ 
+  statut: string;
+  categorie: string; 
+  detailsplainte: string;
+  pvUrl: string;
+  resolvedBy: number;
+}>) {
   const plainte = await this.findOne(id);
   if (!plainte) {
     throw new NotFoundException('Plainte non trouvée');
   }
+
   // Mise à jour des champs
   plainte.statut = updateData.statut ?? plainte.statut;
   plainte.categorie = updateData.categorie ?? plainte.categorie;
-  plainte.detailsplainte = updateData.detailsplainte?? plainte.detailsplainte;
+  plainte.detailsplainte = updateData.detailsplainte ?? plainte.detailsplainte;
+  plainte.pvUrl = updateData.pvUrl ?? plainte.pvUrl;
+
+  // Si le statut est "Resolue", mettre à jour resolvedBy et dateResolution
+  if (updateData.statut === 'Resolue' && updateData.resolvedBy) {
+    plainte.resolvedBy = updateData.resolvedBy;
+    plainte.dateResolution = new Date();
+  }
 
   return this.plainteRepository.save(plainte);
 }
 
+async uploadPV(plainteId: number, file: Express.Multer.File): Promise<Plainte> {
+  const plainte = await this.findOne(plainteId);
+  if (!plainte) {
+    throw new NotFoundException('Plainte non trouvée');
+  }
+
+  // Supprimer l'ancien PV s'il existe
+  if (plainte.pvUrl) {
+    try {
+      const oldFilePath = path.join(process.cwd(), plainte.pvUrl);
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'ancien PV:', error);
+    }
+  }
+
+  // Mettre à jour l'URL du PV
+  plainte.pvUrl = `/uploads/pv/${file.filename}`;
+  return this.plainteRepository.save(plainte);
+}
+
+async deletePV(plainteId: number): Promise<Plainte> {
+  const plainte = await this.findOne(plainteId);
+  if (!plainte) {
+    throw new NotFoundException('Plainte non trouvée');
+  }
+
+  // Supprimer le fichier PV s'il existe
+  if (plainte.pvUrl) {
+    try {
+      const filePath = path.join(process.cwd(), plainte.pvUrl);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du fichier PV:', error);
+    }
+  }
+
+  // Mettre à jour la plainte
+  plainte.pvUrl = '';
+  return this.plainteRepository.save(plainte);
+}
+
+async findPlaintesResolues(): Promise<Plainte[]> {
+  return this.plainteRepository.find({
+    where: { statut: 'Resolue' },
+    relations: ['utilisateur', 'utilisateur.user'],
+    order: {
+      dateResolution: 'DESC'
+    }
+  });
+}
+
+async getAdminInfo(id: number) {
+  const user = await this.userRepository.findOne({
+    where: { id },
+    relations: ['admin'],
+  });
+
+  if (!user || !user.admin) {
+    throw new NotFoundException('Administrateur non trouvé');
+  }
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.admin.email
+  };
+}
 
 }

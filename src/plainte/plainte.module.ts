@@ -1,16 +1,21 @@
 import { Module } from '@nestjs/common';
-import { PlaintesController } from './plainte.controller';
-import { PlaintesService } from './plainte.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Plainte } from '../Entity/plainte.entity';
-import { CategoriePlainte } from '../Entity/categorie.entity';
-import { Marin } from '../Entity/marin.entity';
+import { PlaintesService } from './plainte.service';
+import { PlaintesController } from './plainte.controller';
+import { Plainte } from 'src/Entity/plainte.entity';
+import { Marin } from 'src/Entity/marin.entity';
+import { CategoriePlainte } from 'src/Entity/categorie.entity';
+import { User } from 'src/users/entities/user.entity';
+import { Admin } from 'src/Entity/admin.entity';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Plainte, CategoriePlainte, Marin])
+    TypeOrmModule.forFeature([Plainte, Marin, CategoriePlainte, User, Admin]),
+    UsersModule
   ],
   controllers: [PlaintesController],
-  providers: [PlaintesService]
+  providers: [PlaintesService],
+  exports: [PlaintesService]
 })
 export class PlaintesModule {}

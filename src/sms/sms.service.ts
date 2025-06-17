@@ -44,6 +44,31 @@ export class SmsService {
 
   private normalizePhoneNumber(number: string): string {
     number = number.trim();
+    
+    // Supprimer tous les caractères non numériques sauf le +
+    number = number.replace(/[^\d+]/g, '');
+    
+    // Si le numéro commence par +221, on le laisse tel quel
+    if (number.startsWith('+221')) {
+      return `tel:${number}`;
+    }
+    
+    // Si le numéro commence par 221, on ajoute le +
+    if (number.startsWith('221')) {
+      return `tel:+${number}`;
+    }
+    
+    // Pour les numéros à 9 chiffres (format sénégalais), on ajoute +221
+    if (number.length === 9 && /^[0-9]+$/.test(number)) {
+      return `tel:+221${number}`;
+    }
+    
+    // Pour les numéros à 12 chiffres commençant par 221, on ajoute le +
+    if (number.length === 12 && number.startsWith('221')) {
+      return `tel:+${number}`;
+    }
+    
+    // Pour les autres formats, on ajoute juste tel: et +
     if (number.startsWith('tel:+')) return number;
     if (number.startsWith('+')) return `tel:${number}`;
     return `tel:+${number}`;
@@ -76,6 +101,49 @@ export class SmsService {
     } catch (error) {
       this.logger.error('Erreur envoi SMS', error.response?.data || error.message);
       throw new Error('Échec de l\'envoi du SMS');
+    }
+  }
+
+  async getRemainingSmsQuota(): Promise<number> {
+  try {
+      // S'assurer que le token est disponible
+      if (!this.token) {
+        this.token = await this.getNewToken();
+      }
+
+    const url = 'https://api.orange.com/sms/admin/v1/contracts';
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        Accept: 'application/json',
+      },
+    });
+
+      // Log de la réponse complète pour debug
+      this.logger.log('Réponse API Orange:', JSON.stringify(response.data, null, 2));
+
+      if (!Array.isArray(response.data)) {
+        this.logger.error('La réponse n\'est pas un tableau:', response.data);
+        throw new Error('Format de réponse invalide: la réponse doit être un tableau');
+      }
+
+      let totalAvailable = 0;
+
+      response.data.forEach(offer => {
+        if (offer && typeof offer.availableUnits === 'number') {
+        this.logger.log(
+            `Offre ${offer.offerName}: ${offer.availableUnits} SMS disponibles (${offer.status})`
+        );
+          totalAvailable += offer.availableUnits;
+        } else {
+          this.logger.warn('Format d\'offre invalide:', offer);
+        }
+      });
+
+      return totalAvailable;
+  } catch (error) {
+    this.logger.error('Erreur récupération quota SMS', error.response?.data || error.message);
+      throw error;
     }
   }
 }
