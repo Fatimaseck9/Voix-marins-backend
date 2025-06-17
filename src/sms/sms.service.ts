@@ -58,14 +58,9 @@ export class SmsService {
       return `tel:+${number}`;
     }
     
-    // Pour les numéros à 9 chiffres (format sénégalais), on ajoute +221
+    // Pour les numéros à 9 chiffres (format sénégalais sans indicatif), on ajoute +221
     if (number.length === 9 && /^[0-9]+$/.test(number)) {
       return `tel:+221${number}`;
-    }
-    
-    // Pour les numéros à 12 chiffres commençant par 221, on ajoute le +
-    if (number.length === 12 && number.startsWith('221')) {
-      return `tel:+${number}`;
     }
     
     // Pour les autres formats, on ajoute juste tel: et +
