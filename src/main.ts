@@ -18,36 +18,26 @@ async function bootstrap() {
     }
   }));
   
- app.enableCors({
-  origin: [
-    'http://localhost:4200',
-    'http://localhost:4204',
-    'https://strong-druid-9db0b1.netlify.app',
-    'https://521a-154-124-68-191.ngrok-free.app'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'ngrok-skip-browser-warning',
-    'Range',
-    'Accept',
-    'Origin',
-    'X-Requested-With'
-  ],
-  exposedHeaders: ['Content-Length', 'Content-Range', 'Content-Type'],
-  credentials: true,
-  maxAge: 3600,
-});
+  // Configuration CORS unifiée
+  app.enableCors({
+    origin: ['https://strong-druid-9db0b1.netlify.app', 'http://localhost:4200'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+  });
 
-  // Middleware pour gérer les headers ngrok et augmenter le timeout
+  // Middleware pour gérer les requêtes OPTIONS
   app.use((req, res, next) => {
-    res.setHeader('ngrok-skip-browser-warning', 'true');
-    res.setTimeout(300000); // 5 minutes timeout
+    if (req.method === 'OPTIONS') {
+      res.status(204).end();
+      return;
+    }
     next();
   });
 
-  await app.listen(3001);
+  await app.listen(process.env.PORT || 3001);
 
   const smsService = app.get(SmsService);
   try {
@@ -64,4 +54,5 @@ async function bootstrap() {
     }
   }
 }
+
 void bootstrap();
