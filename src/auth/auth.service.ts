@@ -30,13 +30,8 @@ export class AuthService {
     // Supprimer tous les caractères non numériques
     numero = numero.replace(/[^\d]/g, '');
     
-    // Si le numéro commence par 221, on enlève le 221
+    // Si le numéro commence par 221 (avec ou sans +), on enlève le 221
     if (numero.startsWith('221')) {
-      return numero.substring(3);
-    }
-    
-    // Si c'est un numéro à 12 chiffres (avec 221), on enlève le 221
-    if (numero.length === 12 && numero.startsWith('221')) {
       return numero.substring(3);
     }
     
