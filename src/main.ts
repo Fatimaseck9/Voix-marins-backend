@@ -19,7 +19,7 @@ async function bootstrap() {
   }));
   
   app.enableCors({
-    origin: 'https://6851789c5982c800087e13f6--strong-druid-9db0b1.netlify.app', 
+    origin: '*', 
     //['http://localhost:4200', 'http://localhost:4204','https://521a-154-124-68-191.ngrok-free.app'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'Range', 'Accept'],
