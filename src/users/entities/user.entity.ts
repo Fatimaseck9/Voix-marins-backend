@@ -1,4 +1,3 @@
-
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne } from 'typeorm';
 import { Role } from './role.enum';
 import { Marin } from 'src/Entity/marin.entity';
@@ -16,8 +15,8 @@ export class User {
 
   @OneToOne(() => Marin, (marin) => marin.user, { cascade: true, nullable: true })
   marin?: Marin; 
-  @Column({ type: 'json', nullable: true })
-  refreshToken: any;
+  @Column({ type: 'varchar', nullable: true })
+  refreshToken: string;
  @Column({
     type: 'enum',
     enum: Role,
