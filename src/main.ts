@@ -1,39 +1,74 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { join } from 'path';
+import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as express from 'express';
+import { join } from 'path';
 import { SmsService } from './sms/sms.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // Configuration des fichiers statiques avec options
-  app.use('/uploads', express.static(join(__dirname, '..', 'uploads'), {
-    setHeaders: (res, path) => {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'GET, HEAD');
-      res.set('Access-Control-Allow-Headers', 'Range, Accept');
-      res.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type');
-      res.set('Cache-Control', 'public, max-age=3600');
-    }
-  }));
-  
-  // Configuration CORS unifiée
+  // Configuration CORS plus permissive
   app.enableCors({
-    origin: ['https://strong-druid-9db0b1.netlify.app', 'http://localhost:4200'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+    origin: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
+    allowedHeaders: [
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'X-Requested-With',
+      'Origin',
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Allow-Methods'
+    ],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
     preflightContinue: false,
     optionsSuccessStatus: 204
   });
 
-  // Middleware pour gérer les requêtes OPTIONS
+  // Middleware pour gérer les en-têtes CORS
   app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization, X-Requested-With, Origin, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Access-Control-Allow-Methods');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
     if (req.method === 'OPTIONS') {
-      res.status(204).end();
+      res.sendStatus(204);
       return;
     }
+    next();
+  });
+
+  // Configuration de la validation
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    transform: true,
+    forbidNonWhitelisted: true,
+  }));
+
+  // Configuration Swagger
+  const config = new DocumentBuilder()
+    .setTitle('Voix Marin API')
+    .setDescription('API pour la gestion des marins et leurs plaintes')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
+
+  // Configuration des fichiers statiques
+  app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
+
+  // Augmenter le timeout à 5 minutes
+  app.use((req, res, next) => {
+    res.setTimeout(300000, () => {
+      console.log('Request has timed out.');
+      res.status(408).send('Request has timed out.');
+    });
     next();
   });
 
