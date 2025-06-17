@@ -40,6 +40,11 @@ export class AuthService {
       return numero;
     }
     
+    // Si c'est un numéro à 12 chiffres (avec 221), on enlève le 221
+    if (numero.length === 12 && numero.startsWith('221')) {
+      return numero.substring(3);
+    }
+    
     return numero;
   }
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Post, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, HttpCode, HttpStatus, UseGuards, ValidationPipe } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -8,13 +8,15 @@ export class AuthController {
 
   @Post('request-login')
   async requestLogin(@Body('numero') numero: string) {
+    numero = numero.replace(/[^\d+]/g, '');
     return this.authService.requestLogin(numero);
   }
 
   @Post('verify-code')
   async verifyCode(@Body() body: { numero: string; code: string }) {
     const { numero, code } = body;
-    return this.authService.verifyCode(numero, code);
+    const normalizedNumero = numero.replace(/[^\d+]/g, '');
+    return this.authService.verifyCode(normalizedNumero, code);
   }
 
   @Post('refresh-token')
