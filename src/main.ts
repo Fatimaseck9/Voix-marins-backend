@@ -24,7 +24,7 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'Range', 'Accept'],
     exposedHeaders: ['Content-Length', 'Content-Range', 'Content-Type'],
-    credentials: true,
+    //credentials: true,
     maxAge: 3600,
   });
 
