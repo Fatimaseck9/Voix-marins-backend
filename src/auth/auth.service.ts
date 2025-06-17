@@ -160,7 +160,7 @@ export class AuthService {
       relations: ['user'],
     });
 
-    if (!marin || !marin.user?.refreshToken) {
+    if (!marin || !marin.user || !marin.user.refreshToken || marin.user.refreshToken === '') {
       console.log('Erreur: Utilisateur ou refresh token introuvable');
       throw new UnauthorizedException('Utilisateur ou token introuvable');
     }
@@ -246,7 +246,7 @@ export class AuthService {
       throw new NotFoundException('Utilisateur non trouvé');
     }
 
-    marin.user.refreshToken = null;
+    marin.user.refreshToken = '';  // Utiliser une chaîne vide au lieu de null
     await this.userRepository.save(marin.user);
 
     console.log('Déconnexion réussie pour l\'utilisateur:', marin.user.name);
