@@ -19,11 +19,24 @@ async function bootstrap() {
   }));
   
  app.enableCors({
-  origin: 'https://strong-druid-9db0b1.netlify.app',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'Range', 'Accept'],
+  origin: [
+    'http://localhost:4200',
+    'http://localhost:4204',
+    'https://strong-druid-9db0b1.netlify.app',
+    'https://521a-154-124-68-191.ngrok-free.app'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'ngrok-skip-browser-warning',
+    'Range',
+    'Accept',
+    'Origin',
+    'X-Requested-With'
+  ],
   exposedHeaders: ['Content-Length', 'Content-Range', 'Content-Type'],
-  credentials: true, // utile si tu utilises des cookies / tokens
+  credentials: true,
   maxAge: 3600,
 });
 
@@ -31,8 +44,8 @@ async function bootstrap() {
   app.use((req, res, next) => {
     res.setHeader('ngrok-skip-browser-warning', 'true');
     res.setTimeout(300000); // 5 minutes timeout
-  next();
-});
+    next();
+  });
 
   await app.listen(3001);
 
