@@ -13,6 +13,7 @@ export class SmsService {
 
   private async getNewToken(): Promise<string> {
     try {
+      this.logger.log('Tentative de récupération d\'un nouveau token Orange...');
       const response = await axios.post(
         'https://api.orange.com/oauth/v3/token',
         'grant_type=client_credentials',
@@ -24,22 +25,31 @@ export class SmsService {
           },
         },
       );
+      this.logger.log('Token Orange récupéré avec succès');
       return response.data.access_token;
     } catch (error) {
-      this.logger.error('Erreur récupération token', error.response?.data || error.message);
-      throw error;
+      this.logger.error('Erreur lors de la récupération du token Orange:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+      throw new Error('Impossible de récupérer le token Orange');
     }
   }
 
   private async refreshTokenPeriodically(): Promise<void> {
-    this.token = await this.getNewToken();
-    setInterval(async () => {
-      try {
-        this.token = await this.getNewToken();
-      } catch (err) {
-        this.logger.error('Erreur lors du refresh token', err.message);
-      }
-    }, 3600000); // chaque 1h
+    try {
+      this.token = await this.getNewToken();
+      setInterval(async () => {
+        try {
+          this.token = await this.getNewToken();
+        } catch (err) {
+          this.logger.error('Erreur lors du refresh token:', err.message);
+        }
+      }, 3600000); // chaque 1h
+    } catch (error) {
+      this.logger.error('Erreur lors de l\'initialisation du token:', error.message);
+    }
   }
 
   private normalizePhoneNumber(number: string): string {
@@ -75,51 +85,73 @@ export class SmsService {
   }
 
   async sendSms(recipient: string, message: string): Promise<void> {
-    const sender = this.normalizePhoneNumber(this.SENDER);
-    const to = this.normalizePhoneNumber(recipient);
-
-    const url = `https://api.orange.com/smsmessaging/v1/outbound/${encodeURIComponent(sender)}/requests`;
-    const data = {
-      outboundSMSMessageRequest: {
-        address: to,
-        senderAddress: sender,
-        outboundSMSTextMessage: {
-          message,
-        },
-      },
-    };
-
     try {
-      await axios.post(url, data, {
+      // Vérifier si le token est disponible
+      if (!this.token) {
+        this.logger.log('Token non disponible, tentative de récupération...');
+        this.token = await this.getNewToken();
+      }
+
+      const sender = this.normalizePhoneNumber(this.SENDER);
+      const to = this.normalizePhoneNumber(recipient);
+
+      this.logger.log(`Tentative d'envoi de SMS à ${to} depuis ${sender}`);
+
+      const url = `https://api.orange.com/smsmessaging/v1/outbound/${encodeURIComponent(sender)}/requests`;
+      const data = {
+        outboundSMSMessageRequest: {
+          address: to,
+          senderAddress: sender,
+          outboundSMSTextMessage: {
+            message,
+          },
+        },
+      };
+
+      const response = await axios.post(url, data, {
         headers: {
           Authorization: `Bearer ${this.token}`,
           'Content-Type': 'application/json',
         },
       });
 
-      this.logger.log(`SMS envoyé à ${recipient}`);
+      this.logger.log(`SMS envoyé avec succès à ${recipient}`, response.data);
     } catch (error) {
-      this.logger.error('Erreur envoi SMS', error.response?.data || error.message);
-      throw new Error('Échec de l\'envoi du SMS');
+      this.logger.error('Erreur lors de l\'envoi du SMS:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        recipient,
+        sender: this.SENDER
+      });
+
+      // Si l'erreur est liée au token, on essaie de le rafraîchir
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        this.logger.log('Token invalide, tentative de rafraîchissement...');
+        this.token = await this.getNewToken();
+        // On réessaie une fois
+        return this.sendSms(recipient, message);
+      }
+
+      throw new Error(`Échec de l'envoi du SMS: ${error.message}`);
     }
   }
 
   async getRemainingSmsQuota(): Promise<number> {
-  try {
+    try {
       // S'assurer que le token est disponible
       if (!this.token) {
         this.token = await this.getNewToken();
       }
 
-    const url = 'https://api.orange.com/sms/admin/v1/contracts';
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        Accept: 'application/json',
-      },
-    });
+      const url = 'https://api.orange.com/sms/admin/v1/contracts';
+      const response = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          Accept: 'application/json',
+        },
+      });
 
-      // Log de la réponse complète pour debug
       this.logger.log('Réponse API Orange:', JSON.stringify(response.data, null, 2));
 
       if (!Array.isArray(response.data)) {
@@ -131,9 +163,9 @@ export class SmsService {
 
       response.data.forEach(offer => {
         if (offer && typeof offer.availableUnits === 'number') {
-        this.logger.log(
+          this.logger.log(
             `Offre ${offer.offerName}: ${offer.availableUnits} SMS disponibles (${offer.status})`
-        );
+          );
           totalAvailable += offer.availableUnits;
         } else {
           this.logger.warn('Format d\'offre invalide:', offer);
@@ -141,8 +173,12 @@ export class SmsService {
       });
 
       return totalAvailable;
-  } catch (error) {
-    this.logger.error('Erreur récupération quota SMS', error.response?.data || error.message);
+    } catch (error) {
+      this.logger.error('Erreur lors de la récupération du quota SMS:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       throw error;
     }
   }
