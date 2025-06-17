@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as express from 'express';
 import { join } from 'path';
 import { SmsService } from './sms/sms.service';
@@ -49,16 +48,6 @@ async function bootstrap() {
     transform: true,
     forbidNonWhitelisted: true,
   }));
-
-  // Configuration Swagger
-  const config = new DocumentBuilder()
-    .setTitle('Voix Marin API')
-    .setDescription('API pour la gestion des marins et leurs plaintes')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
 
   // Configuration des fichiers statiques
   app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
