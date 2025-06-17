@@ -13,14 +13,14 @@ import { Admin } from 'typeorm';
   imports: [
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host: 'localhost',
+      host: 'mysql.railway.internal',
       port: 3306,
       username: 'root',
-      password: '',
+      password: 'YHxUZhJPgwHJqUYOekjQvFdooCBsrwux',
       ssl: false,
-      database: 'GestionMarin',
+      database: 'railway',
       autoLoadEntities: true,
-      //synchronize: true,
+      synchronize: true,
       entities: [Plainte, CategoriePlainte, Marin, User, Admin],
     }),
     TypeOrmModule.forFeature([Plainte, CategoriePlainte, Marin]),
