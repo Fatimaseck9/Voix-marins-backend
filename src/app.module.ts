@@ -12,6 +12,7 @@ import { Admin } from 'typeorm';
 @Module({
   imports: [
     TypeOrmModule.forRoot({
+      type: 'mysql',
       host:'jww8ogw4gk00w4w8wk8sg0kw',
       port: 3306,
       username:'mysql',
