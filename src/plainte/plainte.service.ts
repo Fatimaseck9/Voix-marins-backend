@@ -221,7 +221,7 @@ async updatePlainte(id: number, updateData: Partial<{
 
 async uploadFileToLaravel(file: Express.Multer.File, type: 'audio' | 'pv'): Promise<string> {
   const formData = new FormData();
-  formData.append('file', file.buffer, file.originalname);
+  formData.append('audio', file.buffer, file.originalname);
   const url = type === 'audio'
     ? 'https://fichierstockage-production.up.railway.app/api/upload/audio'
     : 'https://fichierstockage-production.up.railway.app/api/upload/pv';
