@@ -50,27 +50,46 @@ export class PlaintesController {
       },
     }),
   )
-  async create(
-    @Body(new ValidationPipe()) dto: CreatePlainteDto,
-    @UploadedFile() file?: Express.Multer.File,
-    @Req() req?: any,
-  ) {
-    const utilisateurId = req.user?.sub;
-    if (!utilisateurId) {
-      throw new BadRequestException('Utilisateur non authentifié');
+  @Post('create')
+@UseInterceptors(FileInterceptor('audio', {
+  fileFilter: (req, file, cb) => {
+    console.log('TYPE MIME reçu :', file.mimetype);
+    if (!file.mimetype.match(/(audio|video)\/(webm|mpeg|wav)/)) {
+      return cb(new BadRequestException(
+        'Type de fichier audio non supporté. Formats acceptés : webm, mpeg, wav'
+      ), false);
     }
-    let audioUrl: string | undefined = undefined;
-    if (file) {
-      audioUrl = await this.plaintesService.uploadFileToLaravel(file, 'audio');
-    }
-    const plainteData: any = {
-      ...dto,
-      audioUrl,
-      utilisateurId,
-      date: file ? new Date().toISOString().split('T')[0] : dto.date,
-    };
-    return this.plaintesService.create(plainteData);
+    cb(null, true);
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024,
   }
+}))
+async create(
+  @UploadedFile() file: Express.Multer.File,
+  @Body(new ValidationPipe({ transform: true })) dto: CreatePlainteDto,
+  @Req() req: any,
+) {
+  const utilisateurId = req.user?.sub;
+  if (!utilisateurId) {
+    throw new BadRequestException('Utilisateur non authentifié');
+  }
+
+  let audioUrl: string | undefined = undefined;
+
+  if (file) {
+    audioUrl = await this.plaintesService.uploadFileToLaravel(file, 'audio');
+  }
+
+  const plainteData: any = {
+    ...dto,
+    audioUrl,
+    utilisateurId,
+    date: file ? new Date().toISOString().split('T')[0] : dto.date,
+  };
+
+  return this.plaintesService.create(plainteData);
+}
 
   @Post('form')
   async submitForm(
