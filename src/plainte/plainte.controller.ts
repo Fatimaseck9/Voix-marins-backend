@@ -17,6 +17,8 @@ import {
   Put,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { PlaintesService } from './plainte.service';
 import { CreatePlainteDto } from 'src/DTO/create-plainte.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
