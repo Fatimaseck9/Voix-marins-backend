@@ -18,43 +18,62 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { PlaintesService } from './plainte.service';
 import { CreatePlainteDto } from 'src/DTO/create-plainte.dto';
+import { extname } from 'path';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { RoleGuard } from 'src/auth/role.guard';
 import { Roles } from 'src/auth/roles.decorator';
 import { Role } from 'src/users/entities/role.enum';
-import { CloudinaryService } from '../Emailservice/cloudinary.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('plaintes')
 export class PlaintesController {
   private readonly logger = new Logger(PlaintesController.name);
 
-  constructor(
-    private readonly plaintesService: PlaintesService,
-    private readonly cloudinaryService: CloudinaryService
-  ) {}
+  constructor(private readonly plaintesService: PlaintesService) {}
 
   @Post('create')
-  @UseInterceptors(FileInterceptor('audio'))
+  @UseInterceptors(
+    FileInterceptor('audio', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `plainte-${uniqueSuffix}${ext}`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/audio\/(webm|mpeg|wav)/)) {
+          return cb(
+            new BadRequestException(
+              'Type de fichier audio non supporté. Formats acceptés : webm, mpeg, wav',
+            ),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024,
+      },
+    }),
+  )
   async create(
     @Body(new ValidationPipe()) dto: CreatePlainteDto,
     @UploadedFile() file?: Express.Multer.File,
     @Req() req?: any,
   ) {
+    console.log('Utilisateur connecté :', req.user);
+    const audioUrl = file ? `/uploads/${file.filename}` : undefined;
     const utilisateurId = req.user?.sub;
+
     if (!utilisateurId) {
       throw new BadRequestException('Utilisateur non authentifié');
     }
 
-    let audioUrl: string | undefined = undefined;
-    if (file) {
-      const uploadResult = await this.cloudinaryService.uploadFile(file, 'plaintes');
-      audioUrl = uploadResult.secure_url;
-    }
-
+    // CORRECTION: Typage explicite pour éviter les erreurs TypeScript
     const plainteData: any = {
       ...dto,
       audioUrl,
@@ -282,13 +301,6 @@ async getPlaintesResolues() {
 @Get('admin/:id')
 async getAdminInfo(@Param('id') id: number) {
   return this.plaintesService.getAdminInfo(id);
-}
-
-@Post('upload')
-@UseInterceptors(FileInterceptor('file'))
-async uploadFile(@UploadedFile() file: Express.Multer.File) {
-  const result = await this.cloudinaryService.uploadFile(file, 'plaintes');
-  return { url: result.secure_url };
 }
 
 }

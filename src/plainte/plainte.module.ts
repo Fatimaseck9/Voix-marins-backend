@@ -8,7 +8,6 @@ import { CategoriePlainte } from 'src/Entity/categorie.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Admin } from 'src/Entity/admin.entity';
 import { UsersModule } from 'src/users/users.module';
-import { CloudinaryService } from '../Emailservice/cloudinary.service';
 
 @Module({
   imports: [
@@ -16,7 +15,7 @@ import { CloudinaryService } from '../Emailservice/cloudinary.service';
     UsersModule
   ],
   controllers: [PlaintesController],
-  providers: [PlaintesService, CloudinaryService],
+  providers: [PlaintesService],
   exports: [PlaintesService]
 })
 export class PlaintesModule {}
