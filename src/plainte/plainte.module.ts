@@ -8,13 +8,11 @@ import { CategoriePlainte } from 'src/Entity/categorie.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Admin } from 'src/Entity/admin.entity';
 import { UsersModule } from 'src/users/users.module';
-import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Plainte, Marin, CategoriePlainte, User, Admin]),
-    UsersModule,
-    HttpModule,
+    UsersModule
   ],
   controllers: [PlaintesController],
   providers: [PlaintesService],

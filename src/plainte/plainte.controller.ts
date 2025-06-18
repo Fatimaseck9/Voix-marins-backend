@@ -17,8 +17,10 @@ import {
   Put,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
 import { PlaintesService } from './plainte.service';
 import { CreatePlainteDto } from 'src/DTO/create-plainte.dto';
+import { extname } from 'path';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { RoleGuard } from 'src/auth/role.guard';
 import { Roles } from 'src/auth/roles.decorator';
@@ -34,6 +36,14 @@ export class PlaintesController {
   @Post('create')
   @UseInterceptors(
     FileInterceptor('audio', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `plainte-${uniqueSuffix}${ext}`);
+        },
+      }),
       fileFilter: (req, file, cb) => {
         if (!file.mimetype.match(/audio\/(webm|mpeg|wav)/)) {
           return cb(
@@ -50,46 +60,29 @@ export class PlaintesController {
       },
     }),
   )
-  @Post('create')
-@UseInterceptors(FileInterceptor('audio', {
-  fileFilter: (req, file, cb) => {
-    console.log('TYPE MIME reçu :', file.mimetype);
-    if (!file.mimetype.match(/(audio|video)\/(webm|mpeg|wav)/)) {
-      return cb(new BadRequestException(
-        'Type de fichier audio non supporté. Formats acceptés : webm, mpeg, wav'
-      ), false);
+  async create(
+    @Body(new ValidationPipe()) dto: CreatePlainteDto,
+    @UploadedFile() file?: Express.Multer.File,
+    @Req() req?: any,
+  ) {
+    console.log('Utilisateur connecté :', req.user);
+    const audioUrl = file ? `/uploads/${file.filename}` : undefined;
+    const utilisateurId = req.user?.sub;
+
+    if (!utilisateurId) {
+      throw new BadRequestException('Utilisateur non authentifié');
     }
-    cb(null, true);
-  },
-  limits: {
-    fileSize: 10 * 1024 * 1024,
+
+    // CORRECTION: Typage explicite pour éviter les erreurs TypeScript
+    const plainteData: any = {
+      ...dto,
+      audioUrl,
+      utilisateurId,
+      date: file ? new Date().toISOString().split('T')[0] : dto.date,
+    };
+
+    return this.plaintesService.create(plainteData);
   }
-}))
-async create(
-  @UploadedFile() file: Express.Multer.File,
-  @Body(new ValidationPipe({ transform: true })) dto: CreatePlainteDto,
-  @Req() req: any,
-) {
-  const utilisateurId = req.user?.sub;
-  if (!utilisateurId) {
-    throw new BadRequestException('Utilisateur non authentifié');
-  }
-
-  let audioUrl: string | undefined = undefined;
-
-  if (file) {
-    audioUrl = await this.plaintesService.uploadFileToLaravel(file, 'audio');
-  }
-
-  const plainteData: any = {
-    ...dto,
-    audioUrl,
-    utilisateurId,
-    date: file ? new Date().toISOString().split('T')[0] : dto.date,
-  };
-
-  return this.plaintesService.create(plainteData);
-}
 
   @Post('form')
   async submitForm(
@@ -258,7 +251,16 @@ async updatePlainte(
 @Post(':id/pv')
 @UseInterceptors(
   FileInterceptor('file', {
+    storage: diskStorage({
+      destination: './uploads/pv',
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const ext = extname(file.originalname);
+        cb(null, `pv-${uniqueSuffix}${ext}`);
+      },
+    }),
     fileFilter: (req, file, cb) => {
+      // Vérifier le type de fichier
       if (!file.mimetype.match(/^(application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document)$/)) {
         return cb(
           new BadRequestException(
@@ -281,6 +283,7 @@ async uploadPV(
   if (!file) {
     throw new BadRequestException('Aucun fichier n\'a été uploadé');
   }
+
   return this.plaintesService.uploadPV(plainteId, file);
 }
 
