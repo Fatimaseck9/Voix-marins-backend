@@ -9,6 +9,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { User } from 'src/users/entities/user.entity';
 import { Admin } from 'src/Entity/admin.entity';
+import { HttpService } from '@nestjs/axios';
+import * as FormData from 'form-data';
+import { lastValueFrom } from 'rxjs';
+import { AxiosResponse } from 'axios';
 
 @Injectable()
 export class PlaintesService {
@@ -30,6 +34,7 @@ export class PlaintesService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Admin)
     private readonly adminRepository: Repository<Admin>,
+    private readonly httpService: HttpService,
   ) {
     void this.initializeCategories();
     void this.updateOldStatuses();
@@ -214,26 +219,33 @@ async updatePlainte(id: number, updateData: Partial<{
   return this.plainteRepository.save(plainte);
 }
 
+async uploadFileToLaravel(file: Express.Multer.File, type: 'audio' | 'pv'): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file.buffer, file.originalname);
+  const url = type === 'audio'
+    ? 'https://fichierstockage-production.up.railway.app/api/upload/audio'
+    : 'https://fichierstockage-production.up.railway.app/api/upload/pv';
+  const response = await lastValueFrom(
+    this.httpService.post(url, formData, {
+      headers: formData.getHeaders(),
+    })
+  ) as AxiosResponse<{ url: string }>;
+  if (!response.data || !response.data.url) {
+    throw new Error('Réponse inattendue de l’API de stockage');
+  }
+  return response.data.url;
+}
+
 async uploadPV(plainteId: number, file: Express.Multer.File): Promise<Plainte> {
   const plainte = await this.findOne(plainteId);
   if (!plainte) {
     throw new NotFoundException('Plainte non trouvée');
   }
-
-  // Supprimer l'ancien PV s'il existe
-  if (plainte.pvUrl) {
-    try {
-      const oldFilePath = path.join(process.cwd(), plainte.pvUrl);
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
-      }
-    } catch (error) {
-      console.error('Erreur lors de la suppression de l\'ancien PV:', error);
-    }
-  }
-
-  // Mettre à jour l'URL du PV
-  plainte.pvUrl = `/uploads/pv/${file.filename}`;
+  // Supprimer l'ancien PV s'il existe (optionnel, car stockage externe)
+  // if (plainte.pvUrl) { ... }
+  // Upload vers Laravel
+  const pvUrl = await this.uploadFileToLaravel(file, 'pv');
+  plainte.pvUrl = pvUrl;
   return this.plainteRepository.save(plainte);
 }
 

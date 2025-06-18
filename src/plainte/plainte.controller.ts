@@ -17,10 +17,8 @@ import {
   Put,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
 import { PlaintesService } from './plainte.service';
 import { CreatePlainteDto } from 'src/DTO/create-plainte.dto';
-import { extname } from 'path';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { RoleGuard } from 'src/auth/role.guard';
 import { Roles } from 'src/auth/roles.decorator';
@@ -36,14 +34,6 @@ export class PlaintesController {
   @Post('create')
   @UseInterceptors(
     FileInterceptor('audio', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          cb(null, `plainte-${uniqueSuffix}${ext}`);
-        },
-      }),
       fileFilter: (req, file, cb) => {
         if (!file.mimetype.match(/audio\/(webm|mpeg|wav)/)) {
           return cb(
@@ -65,22 +55,20 @@ export class PlaintesController {
     @UploadedFile() file?: Express.Multer.File,
     @Req() req?: any,
   ) {
-    console.log('Utilisateur connecté :', req.user);
-    const audioUrl = file ? `/uploads/${file.filename}` : undefined;
     const utilisateurId = req.user?.sub;
-
     if (!utilisateurId) {
       throw new BadRequestException('Utilisateur non authentifié');
     }
-
-    // CORRECTION: Typage explicite pour éviter les erreurs TypeScript
+    let audioUrl: string | undefined = undefined;
+    if (file) {
+      audioUrl = await this.plaintesService.uploadFileToLaravel(file, 'audio');
+    }
     const plainteData: any = {
       ...dto,
       audioUrl,
       utilisateurId,
       date: file ? new Date().toISOString().split('T')[0] : dto.date,
     };
-
     return this.plaintesService.create(plainteData);
   }
 
@@ -251,16 +239,7 @@ async updatePlainte(
 @Post(':id/pv')
 @UseInterceptors(
   FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads/pv',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = extname(file.originalname);
-        cb(null, `pv-${uniqueSuffix}${ext}`);
-      },
-    }),
     fileFilter: (req, file, cb) => {
-      // Vérifier le type de fichier
       if (!file.mimetype.match(/^(application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document)$/)) {
         return cb(
           new BadRequestException(
@@ -283,7 +262,6 @@ async uploadPV(
   if (!file) {
     throw new BadRequestException('Aucun fichier n\'a été uploadé');
   }
-
   return this.plaintesService.uploadPV(plainteId, file);
 }
 
