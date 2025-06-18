@@ -17,10 +17,8 @@ import {
   Put,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
 import { PlaintesService } from './plainte.service';
 import { CreatePlainteDto } from 'src/DTO/create-plainte.dto';
-import { extname } from 'path';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { RoleGuard } from 'src/auth/role.guard';
 import { Roles } from 'src/auth/roles.decorator';
@@ -38,46 +36,23 @@ export class PlaintesController {
   ) {}
 
   @Post('create')
-  @UseInterceptors(
-    FileInterceptor('audio', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          cb(null, `plainte-${uniqueSuffix}${ext}`);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.mimetype.match(/audio\/(webm|mpeg|wav)/)) {
-          return cb(
-            new BadRequestException(
-              'Type de fichier audio non supporté. Formats acceptés : webm, mpeg, wav',
-            ),
-            false,
-          );
-        }
-        cb(null, true);
-      },
-      limits: {
-        fileSize: 10 * 1024 * 1024,
-      },
-    }),
-  )
+  @UseInterceptors(FileInterceptor('audio'))
   async create(
     @Body(new ValidationPipe()) dto: CreatePlainteDto,
     @UploadedFile() file?: Express.Multer.File,
     @Req() req?: any,
   ) {
-    console.log('Utilisateur connecté :', req.user);
-    const audioUrl = file ? `/uploads/${file.filename}` : undefined;
     const utilisateurId = req.user?.sub;
-
     if (!utilisateurId) {
       throw new BadRequestException('Utilisateur non authentifié');
     }
 
-    // CORRECTION: Typage explicite pour éviter les erreurs TypeScript
+    let audioUrl: string | undefined = undefined;
+    if (file) {
+      const uploadResult = await this.cloudinaryService.uploadFile(file, 'plaintes');
+      audioUrl = uploadResult.secure_url;
+    }
+
     const plainteData: any = {
       ...dto,
       audioUrl,
