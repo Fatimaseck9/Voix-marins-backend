@@ -7,27 +7,19 @@ import { PlaintesModule } from './plainte/plainte.module';
 import { User } from './users/entities/user.entity';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { Admin } from 'typeorm';
-
+ 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host:'jww8ogw4gk00w4w8wk8sg0kw',
+      host: 'jww8ogw4gk00w4w8wk8sg0kw',
       port: 3306,
-      username:'mysql',
+      username: 'mysql',
       password: '7mrsg4mJZZShSQSZTOdhqdqr8AYP6acPVZ7Y1gNCZttpBOxrQdnOi2nYB0iFVII0',
-      database:'default',
-      //type: 'mysql',
-      //host: 'mysql.railway.internal',
-      //port: 3306,
-      //username: 'root',
-      //password: 'YHxUZhJPgwHJqUYOekjQvFdooCBsrwux',
-      //ssl: false,
-      //database: 'railway',
+      database: 'default',
       autoLoadEntities: true,
       synchronize: true,
-      entities: [Plainte, CategoriePlainte, Marin, User, Admin],
+      entities: [Plainte, CategoriePlainte, Marin, User],
     }),
     TypeOrmModule.forFeature([Plainte, CategoriePlainte, Marin]),
     PlaintesModule,
