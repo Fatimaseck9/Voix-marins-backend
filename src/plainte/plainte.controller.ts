@@ -25,13 +25,17 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { RoleGuard } from 'src/auth/role.guard';
 import { Roles } from 'src/auth/roles.decorator';
 import { Role } from 'src/users/entities/role.enum';
+import { CloudinaryService } from '../Emailservice/cloudinary.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('plaintes')
 export class PlaintesController {
   private readonly logger = new Logger(PlaintesController.name);
 
-  constructor(private readonly plaintesService: PlaintesService) {}
+  constructor(
+    private readonly plaintesService: PlaintesService,
+    private readonly cloudinaryService: CloudinaryService
+  ) {}
 
   @Post('create')
   @UseInterceptors(
@@ -301,6 +305,13 @@ async getPlaintesResolues() {
 @Get('admin/:id')
 async getAdminInfo(@Param('id') id: number) {
   return this.plaintesService.getAdminInfo(id);
+}
+
+@Post('upload')
+@UseInterceptors(FileInterceptor('file'))
+async uploadFile(@UploadedFile() file: Express.Multer.File) {
+  const result = await this.cloudinaryService.uploadFile(file, 'plaintes');
+  return { url: result.secure_url };
 }
 
 }
