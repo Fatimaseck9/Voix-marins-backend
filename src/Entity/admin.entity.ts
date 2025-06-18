@@ -12,7 +12,7 @@ export class Admin {
   @Column()
   password: string;
 
-  @Column({ default: true })
+  @Column({ default: false })
   isActive: boolean;
 
  @OneToOne(() => User, (user) => user.admin)
