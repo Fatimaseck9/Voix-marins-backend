@@ -20,7 +20,7 @@ async function bootstrap() {
   
   // Configuration CORS unifiée
   app.enableCors({
-    origin: ['https://strong-druid-9db0b1.netlify.app', 'http://localhost:4200'],
+    origin: ['https://voixmarinsenegal.netlify.app', 'http://localhost:4200'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
     credentials: true,
