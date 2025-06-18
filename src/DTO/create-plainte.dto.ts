@@ -37,10 +37,9 @@ export class CreatePlainteDto {
   })
   date?: string;
 
-
-   @IsNotEmpty()
+  @IsOptional()
   @IsInt({ message: 'L\'ID utilisateur doit être un entier' })
-  utilisateurId: number;
+  utilisateurId?: number;
 
   //@IsOptional()
   //@IsString()

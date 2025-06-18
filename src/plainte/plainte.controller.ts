@@ -61,16 +61,31 @@ export class PlaintesController {
     }),
   )
   async create(
-    @Body(new ValidationPipe()) dto: CreatePlainteDto,
+    @Body() dto: any, // Temporairement any pour déboguer
     @UploadedFile() file?: Express.Multer.File,
     @Req() req?: any,
   ) {
+    // AJOUT: Logs pour déboguer
+    this.logger.log('=== DEBUT create ===');
+    this.logger.log('Headers reçus:', req.headers);
+    this.logger.log('Body reçu:', dto);
+    this.logger.log('User from token:', req.user);
+    this.logger.log('File reçu:', file);
+
     console.log('Utilisateur connecté :', req.user);
     const audioUrl = file ? `/uploads/${file.filename}` : undefined;
     const utilisateurId = req.user?.sub;
 
+    this.logger.log('UtilisateurId extrait:', utilisateurId);
+
     if (!utilisateurId) {
+      this.logger.error('Utilisateur non authentifié - req.user:', req.user);
       throw new BadRequestException('Utilisateur non authentifié');
+    }
+
+    // Validation manuelle des champs requis
+    if (!dto.titre || !dto.categorie || !dto.description) {
+      throw new BadRequestException('Titre, catégorie et description sont requis');
     }
 
     // CORRECTION: Typage explicite pour éviter les erreurs TypeScript
@@ -81,7 +96,16 @@ export class PlaintesController {
       date: file ? new Date().toISOString().split('T')[0] : dto.date,
     };
 
-    return this.plaintesService.create(plainteData);
+    this.logger.log('Données à sauvegarder:', plainteData);
+
+    try {
+      const result = await this.plaintesService.create(plainteData);
+      this.logger.log('Plainte créée avec succès:', result);
+      return result;
+    } catch (error) {
+      this.logger.error('Erreur lors de la création de la plainte:', error);
+      throw error;
+    }
   }
 
   @Post('form')
