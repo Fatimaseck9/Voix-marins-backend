@@ -6,6 +6,7 @@ import {
   Matches,
   MinLength,
   MaxLength,
+  IsInt,
 } from 'class-validator';
 
 export class CreatePlainteDto {
@@ -35,6 +36,11 @@ export class CreatePlainteDto {
     message: 'La date doit être au format YYYY-MM-DD',
   })
   date?: string;
+
+
+   @IsNotEmpty()
+  @IsInt({ message: 'L\'ID utilisateur doit être un entier' })
+  utilisateurId: number;
 
   //@IsOptional()
   //@IsString()
