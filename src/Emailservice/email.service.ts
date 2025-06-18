@@ -20,7 +20,7 @@ export class EmailService {
   }
 
   async sendActivationAndTempPassword(email: string, token: string, tempPassword: string): Promise<void> {
-    const activationLink = `http://localhost:4200/activate?token=${token}`;
+    const activationLink = `https://api.gaalgui.sn/activate?token=${token}`;
 
     const mailOptions = {
       from: 'fatimseck54@gmail.com',
