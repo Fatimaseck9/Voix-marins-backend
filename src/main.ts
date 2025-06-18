@@ -7,8 +7,11 @@ import { SmsService } from './sms/sms.service';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // Configuration des fichiers statiques avec options
-  app.use('/uploads', express.static(join(__dirname, '..', 'uploads'), {
+  // Configuration des fichiers statiques avec chemin absolu
+  const uploadsPath = join(process.cwd(), 'uploads');
+  console.log('Chemin du dossier uploads:', uploadsPath);
+  
+  app.use('/uploads', express.static(uploadsPath, {
     setHeaders: (res, path) => {
       res.set('Access-Control-Allow-Origin', '*');
       res.set('Access-Control-Allow-Methods', 'GET, HEAD');

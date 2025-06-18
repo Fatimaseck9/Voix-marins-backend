@@ -88,6 +88,32 @@ export class PlaintesController {
       throw new BadRequestException('Titre, catégorie et description sont requis');
     }
 
+    // Vérification que le fichier a été correctement sauvegardé
+    if (file) {
+      const fs = require('fs');
+      const path = require('path');
+      const filePath = path.join(process.cwd(), 'uploads', file.filename);
+      
+      try {
+        const fileExists = fs.existsSync(filePath);
+        const fileStats = fileExists ? fs.statSync(filePath) : null;
+        
+        this.logger.log('Fichier sauvegardé:', {
+          filename: file.filename,
+          exists: fileExists,
+          size: fileStats ? fileStats.size : 'N/A',
+          path: filePath
+        });
+        
+        if (!fileExists) {
+          throw new BadRequestException('Erreur lors de la sauvegarde du fichier audio');
+        }
+      } catch (error) {
+        this.logger.error('Erreur lors de la vérification du fichier:', error);
+        throw new BadRequestException('Erreur lors de la sauvegarde du fichier audio');
+      }
+    }
+
     // CORRECTION: Typage explicite pour éviter les erreurs TypeScript
     const plainteData: any = {
       ...dto,
@@ -325,6 +351,54 @@ async getPlaintesResolues() {
 @Get('admin/:id')
 async getAdminInfo(@Param('id') id: number) {
   return this.plaintesService.getAdminInfo(id);
+}
+
+@Get('test-static')
+async testStaticFiles() {
+  const fs = require('fs');
+  const path = require('path');
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  
+  try {
+    const exists = fs.existsSync(uploadsDir);
+    const files = exists ? fs.readdirSync(uploadsDir) : [];
+    
+    return {
+      message: 'Test des fichiers statiques',
+      uploadsDir,
+      dirExists: exists,
+      fileCount: files.length,
+      sampleFiles: files.slice(0, 5), // Premiers 5 fichiers
+      cwd: process.cwd()
+    };
+  } catch (error) {
+    return {
+      error: 'Erreur lors du test',
+      details: error.message,
+      cwd: process.cwd()
+    };
+  }
+}
+
+@Get('debug/files')
+async listUploadedFiles() {
+  const fs = require('fs');
+  const path = require('path');
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  
+  try {
+    const files = fs.readdirSync(uploadsDir);
+    return {
+      message: 'Fichiers dans le dossier uploads',
+      files: files.filter(file => file.startsWith('plainte-')),
+      totalFiles: files.length
+    };
+  } catch (error) {
+    return {
+      error: 'Erreur lors de la lecture du dossier uploads',
+      details: error.message
+    };
+  }
 }
 
 }
