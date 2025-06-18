@@ -20,7 +20,7 @@ async function bootstrap() {
   
   // Configuration CORS unifiée
   app.enableCors({
-    origin: ['http://doscg4skk8wwsksk0k0c84gk.92.113.25.175.sslip.io', 'http://localhost:4200'],
+    origin: ['http://r8ks00ks8k88ksscg8g8cocw.92.113.25.175.sslip.io ', 'http://localhost:4200'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
     credentials: true,
