@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { User } from 'src/users/entities/user.entity';
 import { Admin } from 'src/Entity/admin.entity';
+import { CreatePlainteByAdminDto } from 'src/DTO/create-plainte-by-admin.dto';
 
 @Injectable()
 export class PlaintesService {
@@ -285,6 +286,22 @@ async getAdminInfo(id: number) {
     name: user.name,
     email: user.admin.email
   };
+}
+
+async createByAdmin(createPlainteDto: CreatePlainteByAdminDto): Promise<Plainte> {
+  const marin = await this.marinRepository.findOne({
+    where: { id: createPlainteDto.marinId },
+    relations: ['user'],
+  });
+  if (!marin) {
+    throw new NotFoundException(`Marin introuvable pour l'ID fourni`);
+  }
+  const plainte: Plainte = this.plainteRepository.create({
+    ...createPlainteDto,
+    utilisateur: marin,
+    statut: 'En attente',
+  });
+  return this.plainteRepository.save(plainte);
 }
 
 }
