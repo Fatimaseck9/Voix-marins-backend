@@ -401,49 +401,4 @@ async listUploadedFiles() {
   }
 }
 
-@Post('create-by-admin')
-@UseInterceptors(
-  FileInterceptor('audio', {
-    storage: diskStorage({
-      destination: './uploads',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = extname(file.originalname);
-        cb(null, `plainte-${uniqueSuffix}${ext}`);
-      },
-    }),
-    fileFilter: (req, file, cb) => {
-      if (!file.mimetype.match(/audio\/(webm|mpeg|wav)/)) {
-        return cb(
-          new BadRequestException(
-            'Type de fichier audio non supporté. Formats acceptés : webm, mpeg, wav',
-          ),
-          false,
-        );
-      }
-      cb(null, true);
-    },
-    limits: {
-      fileSize: 10 * 1024 * 1024,
-    },
-  }),
-)
-async createByAdmin(
-  @Body() dto: any,
-  @UploadedFile() file?: Express.Multer.File,
-  @Req() req?: any,
-) {
-  this.logger.log('Body reçu (admin):', dto);
-  if (!dto.marinId) {
-    throw new BadRequestException('marinId est requis');
-  }
-  const plainteData: any = {
-    ...dto,
-    audioUrl: file ? `/uploads/${file.filename}` : undefined,
-    date: file ? new Date().toISOString().split('T')[0] : dto.date,
-    marinId: dto.marinId,
-  };
-  return this.plaintesService.createByAdmin(plainteData);
-}
-
 }

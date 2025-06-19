@@ -80,31 +80,31 @@ export class PlaintesService {
   }
 
   async create( 
-    createPlainteDto: CreatePlainteDto & { utilisateurId: number },
-  ): Promise<Plainte> {
-    console.log('Données reçues pour création de plainte:', createPlainteDto);
+  createPlainteDto: CreatePlainteDto & { utilisateurId: number },
+): Promise<Plainte> {
+  console.log('Données reçues pour création de plainte:', createPlainteDto);
 
-    const marin = await this.marinRepository.findOne({
-      where: { user: { id: createPlainteDto.utilisateurId } },
-      relations: ['user'],
-    });
+  const marin = await this.marinRepository.findOne({
+    where: { user: { id: createPlainteDto.utilisateurId } },
+    relations: ['user'],
+  });
 
-    if (!marin) {
-      throw new NotFoundException(
-        `Marin lié à l'utilisateur ID '${createPlainteDto.utilisateurId}' introuvable`,
-      );
-    }
-
-    const plainte = this.plainteRepository.create({
-      ...createPlainteDto,
-      utilisateur: marin,
-      statut: 'En attente',
-    });
-
-    console.log('Plainte créée:', plainte);
-
-    return this.plainteRepository.save(plainte);
+  if (!marin) {
+    throw new NotFoundException(
+      `Marin lié à l'utilisateur ID '${createPlainteDto.utilisateurId}' introuvable`,
+    );
   }
+
+  const plainte = this.plainteRepository.create({
+    ...createPlainteDto,
+    utilisateur: marin,
+    statut: 'En attente',
+  });
+
+  console.log('Plainte créée:', plainte);
+
+  return this.plainteRepository.save(plainte);
+}
 
   findAll(): Promise<Plainte[]> {
     try {
@@ -285,22 +285,6 @@ async getAdminInfo(id: number) {
     name: user.name,
     email: user.admin.email
   };
-}
-
-async createByAdmin(createPlainteDto: any): Promise<Plainte> {
-  const marin = await this.marinRepository.findOne({
-    where: { id: createPlainteDto.marinId },
-    relations: ['user'],
-  });
-  if (!marin) {
-    throw new NotFoundException(`Marin introuvable pour l'ID fourni`);
-  }
-  const plainte = this.plainteRepository.create({
-    ...createPlainteDto,
-    utilisateur: marin,
-    statut: 'En attente',
-  });
-  return this.plainteRepository.save(plainte);
 }
 
 }
