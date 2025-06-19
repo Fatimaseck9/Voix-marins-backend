@@ -17,5 +17,9 @@ export class CreatePlainteByAdminDto {
   @IsString()
   description: string;
 
+  @IsNotEmpty()
+  @IsString()
+  date: string;
+
   // Ajoute d'autres champs si besoin (date, audioUrl, etc.)
 } 
