@@ -290,4 +290,20 @@ async getAdminInfo(id: number) {
   };
 }
 
+async createByAdmin(createPlainteDto: any): Promise<Plainte> {
+  const marin = await this.marinRepository.findOne({
+    where: { id: createPlainteDto.marinId },
+    relations: ['user'],
+  });
+  if (!marin) {
+    throw new NotFoundException(`Marin introuvable pour l'ID fourni`);
+  }
+  const plainte = this.plainteRepository.create({
+    ...createPlainteDto,
+    utilisateur: marin,
+    statut: 'En attente',
+  });
+  return this.plainteRepository.save(plainte);
+}
+
 }
