@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get } from '@nestjs/common';
 import { MarinService } from './marin.service';
 import { CreateMarinDto } from 'src/DTO/create-marin.dto';
 import { RegisterMarinDto } from 'src/users/dto/register-marin.dto';
@@ -17,5 +17,10 @@ export class MarinController {
    @Post('register')
   async registerMarin(@Body() registerMarinDto: RegisterMarinDto): Promise<Marin> {
     return this.marinService.registerMarin(registerMarinDto);
+  }
+
+  @Get()
+  async findAll() {
+    return this.marinService.findAll();
   }
 }

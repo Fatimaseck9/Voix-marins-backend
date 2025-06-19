@@ -57,4 +57,7 @@ export class MarinService {
     }
   }
 
+  async findAll(): Promise<Marin[]> {
+    return this.marinRepo.find({ relations: ['user'] });
+  }
 }
