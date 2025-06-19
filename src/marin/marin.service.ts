@@ -57,7 +57,15 @@ export class MarinService {
     }
   }
 
-  async findAll(): Promise<Marin[]> {
-    return this.marinRepo.find({ relations: ['user'] });
+  async findAll(): Promise<any[]> {
+    const marins = await this.marinRepo.find({ relations: ['user'] });
+    return marins.map(marin => ({
+      id: marin.id,
+      numero: marin.numero,
+      user: marin.user ? {
+        id: marin.user.id,
+        name: marin.user.name
+      } : null
+    }));
   }
 }
