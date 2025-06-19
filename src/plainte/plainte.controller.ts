@@ -65,25 +65,22 @@ export class PlaintesController {
     @UploadedFile() file?: Express.Multer.File,
     @Req() req?: any,
   ) {
+    // AJOUT: Logs pour déboguer
+    this.logger.log('=== DEBUT create ===');
+    this.logger.log('Headers reçus:', req.headers);
     this.logger.log('Body reçu:', dto);
     this.logger.log('User from token:', req.user);
+    this.logger.log('File reçu:', file);
 
-    // Prendre le marinId du body si présent, sinon utiliser l'utilisateur connecté
-    const marinId = dto.marinId || null;
+    console.log('Utilisateur connecté :', req.user);
+    const audioUrl = file ? `/uploads/${file.filename}` : undefined;
     const utilisateurId = req.user?.sub;
 
-    let plainteData: any = {
-      ...dto,
-      audioUrl: file ? `/uploads/${file.filename}` : undefined,
-      date: file ? new Date().toISOString().split('T')[0] : dto.date,
-    };
+    this.logger.log('UtilisateurId extrait:', utilisateurId);
 
-    if (marinId) {
-      plainteData.marinId = marinId;
-    } else if (utilisateurId) {
-      plainteData.utilisateurId = utilisateurId;
-    } else {
-      throw new BadRequestException('Aucun marin ou utilisateur authentifié');
+    if (!utilisateurId) {
+      this.logger.error('Utilisateur non authentifié - req.user:', req.user);
+      throw new BadRequestException('Utilisateur non authentifié');
     }
 
     // Validation manuelle des champs requis
@@ -96,15 +93,18 @@ export class PlaintesController {
       const fs = require('fs');
       const path = require('path');
       const filePath = path.join(process.cwd(), 'uploads', file.filename);
+      
       try {
         const fileExists = fs.existsSync(filePath);
         const fileStats = fileExists ? fs.statSync(filePath) : null;
+        
         this.logger.log('Fichier sauvegardé:', {
           filename: file.filename,
           exists: fileExists,
           size: fileStats ? fileStats.size : 'N/A',
           path: filePath
         });
+        
         if (!fileExists) {
           throw new BadRequestException('Erreur lors de la sauvegarde du fichier audio');
         }
@@ -113,6 +113,14 @@ export class PlaintesController {
         throw new BadRequestException('Erreur lors de la sauvegarde du fichier audio');
       }
     }
+
+    // CORRECTION: Typage explicite pour éviter les erreurs TypeScript
+    const plainteData: any = {
+      ...dto,
+      audioUrl,
+      utilisateurId,
+      date: file ? new Date().toISOString().split('T')[0] : dto.date,
+    };
 
     this.logger.log('Données à sauvegarder:', plainteData);
 

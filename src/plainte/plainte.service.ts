@@ -79,24 +79,19 @@ export class PlaintesService {
     });
   }
 
-  async create(createPlainteDto: any): Promise<Plainte> {
-    let marin = null;
+  async create( 
+    createPlainteDto: CreatePlainteDto & { utilisateurId: number },
+  ): Promise<Plainte> {
+    console.log('Données reçues pour création de plainte:', createPlainteDto);
 
-    if (createPlainteDto.marinId) {
-      marin = await this.marinRepository.findOne({
-        where: { id: createPlainteDto.marinId },
-        relations: ['user'],
-      });
-    } else if (createPlainteDto.utilisateurId) {
-      marin = await this.marinRepository.findOne({
-        where: { user: { id: createPlainteDto.utilisateurId } },
-        relations: ['user'],
-      });
-    }
+    const marin = await this.marinRepository.findOne({
+      where: { user: { id: createPlainteDto.utilisateurId } },
+      relations: ['user'],
+    });
 
     if (!marin) {
       throw new NotFoundException(
-        `Marin introuvable pour l'ID fourni`
+        `Marin lié à l'utilisateur ID '${createPlainteDto.utilisateurId}' introuvable`,
       );
     }
 
@@ -105,6 +100,8 @@ export class PlaintesService {
       utilisateur: marin,
       statut: 'En attente',
     });
+
+    console.log('Plainte créée:', plainte);
 
     return this.plainteRepository.save(plainte);
   }
