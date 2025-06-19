@@ -1,5 +1,5 @@
-
-import { Controller, Post, Body, Get, Delete, Param, Patch } from '@nestjs/common';
+import { Controller, Post, Body, Get, Delete, Param, Patch, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserService } from './users.service';
@@ -27,9 +27,14 @@ export class UserController {
 
 
   @Get('admins')
-findAdmins() {
-  return this.userService.findAdmins();
-}
+  async findAdmins() {
+    const admins = await this.userService.findAdmins();
+    return {
+      success: true,
+      data: admins,
+      count: admins.length
+    };
+  }
 
 @Delete(':id')
 deleteAdmin(@Param('id') id: number) {

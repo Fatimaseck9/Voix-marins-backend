@@ -90,46 +90,53 @@ export class UserService {
     }
   }
 
+  async findAdmins(): Promise<any[]> {
+    const admins = await this.userRepo.find({
+      where: { role: Role.ADMIN },
+      relations: ['admin'],
+    });
 
-  async findAdmins(): Promise<User[]> {
-  return this.userRepo.find({
-    where: { role: Role.ADMIN },
-    relations: ['admin'],
-  });
-
-
-}
-
-
-async deleteAdmin(id: number): Promise<void> {
-  const user = await this.userRepo.findOne({ where: { id }, relations: ['admin'] });
-  if (!user) throw new NotFoundException("Utilisateur non trouvé");
-
-  // Supprimer d'abord l'entité Admin liée
-  if (user.admin) {
-    await this.adminRepo.remove(user.admin);
+    // Retourner les données sans le mot de passe
+    return admins.map(admin => ({
+      id: admin.id,
+      name: admin.name,
+      role: admin.role,
+      admin: admin.admin ? {
+        id: admin.admin.id,
+        email: admin.admin.email,
+        isActive: admin.admin.isActive
+      } : null
+    }));
   }
 
-  await this.userRepo.remove(user);
-}
+  async deleteAdmin(id: number): Promise<void> {
+    const user = await this.userRepo.findOne({ where: { id }, relations: ['admin'] });
+    if (!user) throw new NotFoundException("Utilisateur non trouvé");
 
-async toggleActivation(id: number): Promise<User> {
-  const user = await this.userRepo.findOne({ where: { id }, relations: ['admin'] });
-  if (!user || !user.admin) {
-    throw new NotFoundException('Administrateur non trouvé');
+    // Supprimer d'abord l'entité Admin liée
+    if (user.admin) {
+      await this.adminRepo.remove(user.admin);
+    }
+
+    await this.userRepo.remove(user);
   }
 
-  user.admin.isActive = !user.admin.isActive;
-  await this.adminRepo.save(user.admin);
-  return user;
-}
+  async toggleActivation(id: number): Promise<User> {
+    const user = await this.userRepo.findOne({ where: { id }, relations: ['admin'] });
+    if (!user || !user.admin) {
+      throw new NotFoundException('Administrateur non trouvé');
+    }
 
-async updateAdmin(id: number, updateData: Partial<User>): Promise<User> {
-  const user = await this.userRepo.findOne({ where: { id } });
-  if (!user) throw new NotFoundException("Utilisateur non trouvé");
+    user.admin.isActive = !user.admin.isActive;
+    await this.adminRepo.save(user.admin);
+    return user;
+  }
 
-  Object.assign(user, updateData);
-  return this.userRepo.save(user);
-}
+  async updateAdmin(id: number, updateData: Partial<User>): Promise<User> {
+    const user = await this.userRepo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException("Utilisateur non trouvé");
 
+    Object.assign(user, updateData);
+    return this.userRepo.save(user);
+  }
 }
