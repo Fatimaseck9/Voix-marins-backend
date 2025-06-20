@@ -10,6 +10,7 @@ import * as path from 'path';
 import { User } from 'src/users/entities/user.entity';
 import { Admin } from 'src/Entity/admin.entity';
 import { CreatePlainteByAdminDto } from 'src/DTO/create-plainte-by-admin.dto';
+import * as ffmpeg from 'fluent-ffmpeg';
 
 @Injectable()
 export class PlaintesService {
@@ -302,6 +303,36 @@ async createByAdmin(createPlainteDto: CreatePlainteByAdminDto): Promise<Plainte>
     statut: 'En attente',
   });
   return this.plainteRepository.save(plainte);
+}
+
+async convertToMp3(inputPath: string, outputPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .toFormat('mp3')
+      .on('end', () => resolve())
+      .on('error', (err) => reject(err))
+      .save(outputPath);
+  });
+}
+
+async uploadAudio(file: Express.Multer.File): Promise<string> {
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const originalPath = file.path; // Chemin du fichier uploadé
+  const mp3Filename = file.filename.replace(/\.[^/.]+$/, "") + '.mp3';
+  const mp3Path = path.join(uploadsDir, mp3Filename);
+
+  // Conversion si ce n'est pas déjà un mp3
+  if (!file.mimetype.includes('mp3')) {
+    await this.convertToMp3(originalPath, mp3Path);
+    // Supprimer l'original après conversion
+    fs.unlinkSync(originalPath);
+  } else {
+    // Si déjà mp3, on le déplace/renomme simplement
+    fs.renameSync(originalPath, mp3Path);
+  }
+
+  // Retourner le chemin relatif pour le frontend
+  return `/uploads/${mp3Filename}`;
 }
 
 }

@@ -46,10 +46,10 @@ export class PlaintesController {
         },
       }),
       fileFilter: (req, file, cb) => {
-        if (!file.mimetype.match(/audio\/(webm|mpeg|wav)/)) {
+        if (!file.mimetype.match(/audio\/(webm|mpeg|wav|mp4|mp3)/)) {
           return cb(
             new BadRequestException(
-              'Type de fichier audio non supporté. Formats acceptés : webm, mpeg, wav',
+              'Type de fichier audio non supporté. Formats acceptés : webm, mpeg, wav, mp4, mp3',
             ),
             false,
           );
@@ -66,10 +66,12 @@ export class PlaintesController {
     @UploadedFile() file?: Express.Multer.File,
     @Req() req?: any,
   ) {
+    // Logs de diagnostic pour l'authentification
     this.logger.log('=== DEBUT create ===');
     this.logger.log('Headers reçus:', req.headers);
+    this.logger.log('Authorization header:', req.headers.authorization);
+    this.logger.log('User object:', req.user);
     this.logger.log('Body reçu:', dto);
-    this.logger.log('User from token:', req.user);
     this.logger.log('File reçu:', file);
 
     const utilisateurId = req.user?.sub;
@@ -86,8 +88,15 @@ export class PlaintesController {
       throw new BadRequestException('Titre, catégorie et description sont requis');
     }
 
-    // Sauvegarde directe du fichier sans conversion
-    const audioUrl = file ? `/uploads/${file.filename}` : undefined;
+    let audioUrl: string | undefined;
+    if (file) {
+      try {
+        audioUrl = await this.plaintesService.uploadAudio(file);
+      } catch (error) {
+        this.logger.error(`Erreur de conversion audio: ${error.message}`, error.stack);
+        throw new BadRequestException('Erreur lors de la conversion du fichier audio.');
+      }
+    }
 
     const plainteData: any = {
       ...dto,
@@ -387,10 +396,10 @@ async listUploadedFiles() {
       },
     }),
     fileFilter: (req, file, cb) => {
-      if (!file.mimetype.match(/audio\/(webm|mpeg|wav)/)) {
+      if (!file.mimetype.match(/audio\/(webm|mpeg|wav|mp4|mp3)/)) {
         return cb(
           new BadRequestException(
-            'Type de fichier audio non supporté. Formats acceptés : webm, mpeg, wav',
+            'Type de fichier audio non supporté. Formats acceptés : webm, mpeg, wav, mp4, mp3',
           ),
           false,
         );
@@ -412,8 +421,15 @@ async createByAdmin(
     throw new BadRequestException('marinId est requis');
   }
 
-  // Sauvegarde directe du fichier sans conversion
-  const audioUrl = file ? `/uploads/${file.filename}` : undefined;
+  let audioUrl: string | undefined;
+  if (file) {
+    try {
+      audioUrl = await this.plaintesService.uploadAudio(file);
+    } catch (error) {
+      this.logger.error(`Erreur de conversion audio: ${error.message}`, error.stack);
+      throw new BadRequestException('Erreur lors de la conversion du fichier audio.');
+    }
+  }
 
   const plainteData: any = {
     ...dto,
