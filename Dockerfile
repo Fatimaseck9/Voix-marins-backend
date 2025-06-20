@@ -13,6 +13,9 @@ RUN npm ci
 # Installer ffmpeg (nécessaire pour la conversion audio)
 RUN apk add --no-cache ffmpeg
 
+# Debug : vérifier que ffmpeg est bien installé
+RUN ffmpeg -version
+
 # Copier tout le code source (sauf ce qui est dans .dockerignore)
 COPY . .
 
