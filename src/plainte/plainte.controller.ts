@@ -46,10 +46,10 @@ export class PlaintesController {
         },
       }),
       fileFilter: (req, file, cb) => {
-        if (!file.mimetype.match(/audio\/(webm|mpeg|wav|mp4|mp3)/)) {
+        if (!file.mimetype.match(/audio\/(webm|mpeg|wav)/)) {
           return cb(
             new BadRequestException(
-              'Type de fichier audio non supporté. Formats acceptés : webm, mpeg, wav, mp4, mp3',
+              'Type de fichier audio non supporté. Formats acceptés : webm, mpeg, wav',
             ),
             false,
           );
@@ -88,15 +88,8 @@ export class PlaintesController {
       throw new BadRequestException('Titre, catégorie et description sont requis');
     }
 
-    let audioUrl: string | undefined;
-    if (file) {
-      try {
-        audioUrl = await this.plaintesService.uploadAudio(file);
-      } catch (error) {
-        this.logger.error(`Erreur de conversion audio: ${error.message}`, error.stack);
-        throw new BadRequestException('Erreur lors de la conversion du fichier audio.');
-      }
-    }
+    // Sauvegarde directe du fichier sans conversion
+    const audioUrl = file ? `/uploads/${file.filename}` : undefined;
 
     const plainteData: any = {
       ...dto,
@@ -396,10 +389,10 @@ async listUploadedFiles() {
       },
     }),
     fileFilter: (req, file, cb) => {
-      if (!file.mimetype.match(/audio\/(webm|mpeg|wav|mp4|mp3)/)) {
+      if (!file.mimetype.match(/audio\/(webm|mpeg|wav)/)) {
         return cb(
           new BadRequestException(
-            'Type de fichier audio non supporté. Formats acceptés : webm, mpeg, wav, mp4, mp3',
+            'Type de fichier audio non supporté. Formats acceptés : webm, mpeg, wav',
           ),
           false,
         );
@@ -421,15 +414,8 @@ async createByAdmin(
     throw new BadRequestException('marinId est requis');
   }
 
-  let audioUrl: string | undefined;
-  if (file) {
-    try {
-      audioUrl = await this.plaintesService.uploadAudio(file);
-    } catch (error) {
-      this.logger.error(`Erreur de conversion audio: ${error.message}`, error.stack);
-      throw new BadRequestException('Erreur lors de la conversion du fichier audio.');
-    }
-  }
+  // Sauvegarde directe du fichier sans conversion
+  const audioUrl = file ? `/uploads/${file.filename}` : undefined;
 
   const plainteData: any = {
     ...dto,
