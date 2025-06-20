@@ -62,19 +62,16 @@ export class PlaintesController {
     }),
   )
   async create(
-    @Body() dto: any, // Temporairement any pour déboguer
+    @Body() dto: any,
     @UploadedFile() file?: Express.Multer.File,
     @Req() req?: any,
   ) {
-    // AJOUT: Logs pour déboguer
     this.logger.log('=== DEBUT create ===');
     this.logger.log('Headers reçus:', req.headers);
     this.logger.log('Body reçu:', dto);
     this.logger.log('User from token:', req.user);
     this.logger.log('File reçu:', file);
 
-    console.log('Utilisateur connecté :', req.user);
-    const audioUrl = file ? `/uploads/${file.filename}` : undefined;
     const utilisateurId = req.user?.sub;
 
     this.logger.log('UtilisateurId extrait:', utilisateurId);
@@ -89,33 +86,9 @@ export class PlaintesController {
       throw new BadRequestException('Titre, catégorie et description sont requis');
     }
 
-    // Vérification que le fichier a été correctement sauvegardé
-    if (file) {
-      const fs = require('fs');
-      const path = require('path');
-      const filePath = path.join(process.cwd(), 'uploads', file.filename);
-      
-      try {
-        const fileExists = fs.existsSync(filePath);
-        const fileStats = fileExists ? fs.statSync(filePath) : null;
-        
-        this.logger.log('Fichier sauvegardé:', {
-          filename: file.filename,
-          exists: fileExists,
-          size: fileStats ? fileStats.size : 'N/A',
-          path: filePath
-        });
-        
-        if (!fileExists) {
-          throw new BadRequestException('Erreur lors de la sauvegarde du fichier audio');
-        }
-      } catch (error) {
-        this.logger.error('Erreur lors de la vérification du fichier:', error);
-        throw new BadRequestException('Erreur lors de la sauvegarde du fichier audio');
-      }
-    }
+    // Sauvegarde directe du fichier sans conversion
+    const audioUrl = file ? `/uploads/${file.filename}` : undefined;
 
-    // CORRECTION: Typage explicite pour éviter les erreurs TypeScript
     const plainteData: any = {
       ...dto,
       audioUrl,
@@ -438,9 +411,13 @@ async createByAdmin(
   if (!dto.marinId) {
     throw new BadRequestException('marinId est requis');
   }
+
+  // Sauvegarde directe du fichier sans conversion
+  const audioUrl = file ? `/uploads/${file.filename}` : undefined;
+
   const plainteData: any = {
     ...dto,
-    audioUrl: file ? `/uploads/${file.filename}` : undefined,
+    audioUrl,
     date: file ? new Date().toISOString().split('T')[0] : dto['date'],
     marinId: dto.marinId,
   };
