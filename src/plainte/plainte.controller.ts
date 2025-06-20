@@ -74,7 +74,7 @@ export class PlaintesController {
     this.logger.log('File reçu:', file);
 
     console.log('Utilisateur connecté :', req.user);
-    const audioUrl = file ? `/uploads/${file.filename}` : undefined;
+    let audioUrl = file ? `/uploads/${file.filename}` : undefined;
     const utilisateurId = req.user?.sub;
 
     this.logger.log('UtilisateurId extrait:', utilisateurId);
@@ -93,21 +93,33 @@ export class PlaintesController {
     if (file) {
       const fs = require('fs');
       const path = require('path');
-      const filePath = path.join(process.cwd(), 'uploads', file.filename);
-      
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      const filePath = path.join(uploadsDir, file.filename);
       try {
         const fileExists = fs.existsSync(filePath);
         const fileStats = fileExists ? fs.statSync(filePath) : null;
-        
         this.logger.log('Fichier sauvegardé:', {
           filename: file.filename,
           exists: fileExists,
           size: fileStats ? fileStats.size : 'N/A',
           path: filePath
         });
-        
         if (!fileExists) {
           throw new BadRequestException('Erreur lors de la sauvegarde du fichier audio');
+        }
+        // AJOUT: Conversion automatique en mp3 si besoin
+        const mp3Filename = file.filename.replace(/\.[^/.]+$/, '') + '.mp3';
+        const mp3Path = path.join(uploadsDir, mp3Filename);
+        if (!file.mimetype.includes('mp3')) {
+          try {
+            await this.plaintesService.convertToMp3(filePath, mp3Path);
+            fs.unlinkSync(filePath); // Supprime l'original
+            audioUrl = `/uploads/${mp3Filename}`;
+            this.logger.log('Conversion mp3 réussie:', audioUrl);
+          } catch (err) {
+            this.logger.error('Erreur lors de la conversion audio en mp3:', err);
+            throw new BadRequestException('Erreur lors de la conversion audio');
+          }
         }
       } catch (error) {
         this.logger.error('Erreur lors de la vérification du fichier:', error);
